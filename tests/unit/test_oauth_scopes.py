@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import pytest
 
-from ab.config import ABConnectSettings, load_settings
+from ab.config import ABConnectSettings
 from ab.exceptions import AuthenticationError
 from ab.http import HttpClient
 
@@ -50,8 +50,14 @@ class TestScopeDefaults:
         assert _settings(environment="staging", scopes="").oauth_scopes == ""
 
     def test_scopes_read_from_environment(self, monkeypatch):
+        """Constructed directly rather than through ``load_settings``: that
+        helper also requires client credentials, which a bare CI checkout has
+        no ``.env`` to supply."""
         monkeypatch.setenv("ABCONNECT_SCOPES", "roles offline_access")
-        settings = load_settings(env="staging", require_credentials=False)
+        settings = ABConnectSettings(
+            client_id="toolsApp", client_secret="s",
+            require_credentials=False, environment="staging",
+        )
         assert settings.oauth_scopes == "roles offline_access"
 
 
