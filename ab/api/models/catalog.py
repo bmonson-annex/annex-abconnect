@@ -37,10 +37,10 @@ from __future__ import annotations
 from datetime import datetime
 from typing import TYPE_CHECKING, List, Optional
 
-from pydantic import Field
+from pydantic import Field, field_validator
 
 from ab.api.models.base import RequestModel, ResponseModel
-from ab.api.models.lots import LotCatalogInformationDto, LotDataDto
+from ab.api.models.lots import AuctionLotNumber, LotCatalogInformationDto, LotDataDto
 from ab.api.models.platforms import CatalogPlatformDto
 
 if TYPE_CHECKING:
@@ -164,7 +164,7 @@ class BulkUpsertLotRequest(RequestModel):
     """
 
     customer_item_id: str = Field(..., alias="customerItemId", description="Customer item ID")
-    lot_number: str = Field(..., alias="lotNumber", description="Lot number")
+    lot_number: AuctionLotNumber = Field(..., alias="lotNumber", description="Auction lot number")
     image_links: List[str] = Field(
         default_factory=list, alias="imageLinks", description="Image URLs",
     )
@@ -247,6 +247,18 @@ class BulkUpsertRequest(RequestModel):
     catalogs: List[BulkUpsertCatalogRequest] = Field(
         default_factory=list, description="Catalogs to upsert, each with nested lots and seller",
     )
+
+    @field_validator("catalogs")
+    @classmethod
+    def _distinct_lot_numbers(cls, catalogs: List[BulkUpsertCatalogRequest]) -> List[BulkUpsertCatalogRequest]:
+        seen = set()
+        for catalog in catalogs:
+            for lot in catalog.lots:
+                key = (catalog.platform_id, catalog.customer_catalog_id, lot.lot_number)
+                if key in seen:
+                    raise ValueError(f"duplicate lot number {lot.lot_number} in catalog {catalog.customer_catalog_id}")
+                seen.add(key)
+        return catalogs
 
 
 def _rebuild_catalog_models() -> None:

@@ -34,7 +34,7 @@ Request model: :class:`AddLotRequest`
 |---|---|---|---|
 | `imageLinks` | `Optional[list[str]]` | no | Image URLs attached to the lot |
 | `itemData` | `Optional[list[LotDataDto]]` | no | Item data entries (formerly ``overridenData``) |
-| `catalogs` | `Optional[list[LotCatalogDto]]` | no | Catalogs this lot belongs to |
+| `catalogs` | `Optional[list[NewLotCatalogDto]]` | no | Catalogs this lot belongs to |
 | `platforms` | `Optional[list[LotPlatformDto]]` | no | Platforms this lot is published to, with its external ID on each |
 | `initialData` | `Optional[LotDataDto]` | no | Initial lot measurements |
 
