@@ -14,6 +14,21 @@ migrated as of this release, so these calls fail against it —
 `annex-abconnect==0.1.15` is the last release modelling the pre-migration schema.
 ```
 
+## Auction lot numbers
+
+Bulk imports and new lots send each supplied `lotNumber` as a string with four
+ASCII digits and an optional uppercase letter. For example, `417` becomes
+`"0417"`, `"7b"` becomes `"0007B"`, and `"00123"` becomes `"0123"`.
+Invalid and out-of-range values fail validation. A bulk catalog containing two
+rows that normalize to the same number fails before any HTTP request.
+
+Catalog and platform item identifiers keep their original strings. Reads
+return legacy lot-number spellings, and `lots.update` preserves values sent
+back for other catalog associations. For a reviewed correction, use
+`ab.api.models.lots.normalize_lot_number` on the chosen association.
+Verify the stored spelling by reading it back. Older Catalog API bulk
+handlers could strip leading zeros after receiving the correctly padded JSON.
+
 ## Per-endpoint reference
 
 Each route-backed method has its own page rendering the HTTP route, the

@@ -30,13 +30,32 @@ doubt swagger wins per the constitution's Sources of Truth hierarchy.
 
 from __future__ import annotations
 
+import re
 from datetime import datetime
-from typing import List, Optional
+from typing import Annotated, List, Optional
 
-from pydantic import AliasChoices, ConfigDict, Field, field_validator
+from pydantic import AliasChoices, BeforeValidator, ConfigDict, Field, field_validator
 
 from ab.api.models.base import RequestModel, ResponseModel
 from ab.api.models.platforms import LotPlatformDto
+
+_LOT_NUMBER = re.compile(r"([0-9]+)([A-Za-z]?)")
+
+
+def normalize_lot_number(value: object) -> str:
+    """Format an auction lot number for import, preserving its optional suffix."""
+    if isinstance(value, int) and not isinstance(value, bool) and 0 <= value <= 9999:
+        return f"{value:04d}"
+    if isinstance(value, str):
+        match = _LOT_NUMBER.fullmatch(value.strip())
+        if match:
+            digits = match[1].lstrip("0")
+            if len(digits) <= 4:
+                return digits.zfill(4) + match[2].upper()
+    raise ValueError("expected an auction lot number from 0 to 9999 with an optional ASCII letter suffix")
+
+
+AuctionLotNumber = Annotated[str, BeforeValidator(normalize_lot_number)]
 
 
 class LotDataDto(ResponseModel):
@@ -157,6 +176,14 @@ class LotCatalogDto(ResponseModel):
     lot_number: Optional[str] = Field(None, alias="lotNumber", description="Lot number within catalog")
 
 
+class NewLotCatalogDto(LotCatalogDto):
+    """An explicitly supplied catalog association when creating a new lot."""
+
+    # Callers may also pass an existing LotCatalogDto instance.
+    model_config = ConfigDict(from_attributes=True)
+    lot_number: Optional[AuctionLotNumber] = Field(None, alias="lotNumber", description="Auction lot number")
+
+
 class LotCatalogInformationDto(ResponseModel):
     """Basic lot information embedded in a catalog response."""
 
@@ -232,7 +259,7 @@ class AddLotRequest(RequestModel):
     item_data: Optional[List[LotDataDto]] = Field(
         None, alias="itemData", description="Item data entries (formerly ``overridenData``)",
     )
-    catalogs: Optional[List[LotCatalogDto]] = Field(
+    catalogs: Optional[List[NewLotCatalogDto]] = Field(
         None, description="Catalogs this lot belongs to",
     )
     platforms: Optional[List[LotPlatformDto]] = Field(
